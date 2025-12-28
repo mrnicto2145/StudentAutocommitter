@@ -7,9 +7,7 @@ import os
 import sys
 import logging
 import subprocess
-from pathlib import Path
-from typing import Optional, Dict, Any
-import json
+from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
 
@@ -18,19 +16,19 @@ class SystemIntegration:
     def __init__(self, config_manager):
         """
         Инициализация интеграции с ОС
-        
+
         Args:
             config_manager: Экземпляр ConfigManager
         """
         self.config = config_manager
         self.is_windows = sys.platform == "win32"
-        
+
         logger.info(f"System integration initialized for {sys.platform}")
-    
+
     def install_autostart(self) -> Dict[str, Any]:
         """
         Устанавливает автозапуск при старте системы
-        
+
         Returns:
             Результат операции
         """
@@ -38,12 +36,12 @@ class SystemIntegration:
             return self._install_windows_autostart()
         else:
             return self._install_linux_autostart()
-    
+
     def _install_windows_autostart(self) -> Dict[str, Any]:
         """Устанавливает автозапуск в Windows"""
         try:
             method = self.config.get("auto_start.startup_method", "registry")
-            
+
             if method == "registry":
                 return self._install_windows_registry()
             elif method == "task_scheduler":
@@ -54,23 +52,19 @@ class SystemIntegration:
                 return {
                     "success": False,
                     "error": f"Unknown startup method: {method}",
-                    "method": method
+                    "method": method,
                 }
-                
+
         except Exception as e:
-            return {
-                "success": False,
-                "error": str(e),
-                "method": "unknown"
-            }
-    
+            return {"success": False, "error": str(e), "method": "unknown"}
+
     def _install_windows_registry(self) -> Dict[str, Any]:
         """Устанавливает автозапуск через реестр Windows"""
         try:
             import winreg
-            
+
             # Путь к исполняемому файлу
-            if getattr(sys, 'frozen', False):
+            if getattr(sys, "frozen", False):
                 # Если упаковано в exe
                 exe_path = sys.executable
             else:
@@ -81,58 +75,45 @@ class SystemIntegration:
                 # На самом деле нужно запускать main.py, но для примера:
                 main_path = os.path.join(os.path.dirname(script_path), "main.py")
                 cmd = f'"{exe_path}" "{main_path}" start'
-            
+
             # Ключ автозапуска
             key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
             key_name = "StudentAutocommiter"
-            
+
             # Открываем ключ
             key = winreg.OpenKey(
-                winreg.HKEY_CURRENT_USER,
-                key_path,
-                0,
-                winreg.KEY_SET_VALUE
+                winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE
             )
-            
+
             # Устанавливаем значение
-            winreg.SetValueEx(
-                key,
-                key_name,
-                0,
-                winreg.REG_SZ,
-                cmd
-            )
-            
+            winreg.SetValueEx(key, key_name, 0, winreg.REG_SZ, cmd)
+
             winreg.CloseKey(key)
-            
+
             logger.info(f"Added to Windows startup via registry: {key_name}")
-            
+
             return {
                 "success": True,
                 "method": "registry",
                 "key": key_name,
-                "command": cmd
+                "command": cmd,
             }
-            
+
         except ImportError:
             return {
                 "success": False,
                 "error": "winreg module not available",
-                "method": "registry"
+                "method": "registry",
             }
         except Exception as e:
-            return {
-                "success": False,
-                "error": str(e),
-                "method": "registry"
-            }
-    
+            return {"success": False, "error": str(e), "method": "registry"}
+
     def _install_windows_task_scheduler(self) -> Dict[str, Any]:
         """Создает задание в Планировщике задач Windows"""
         try:
             # Создаем XML для задания
             task_name = "StudentAutocommiter"
-            task_xml = f'''<?xml version="1.0" encoding="UTF-16"?>
+            task_xml = f"""<?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
   <RegistrationInfo>
     <Description>Student Autocommiter - Automated Git commits</Description>
@@ -174,45 +155,44 @@ class SystemIntegration:
       <Arguments>"{os.path.join(os.path.dirname(__file__), "main.py")}" start</Arguments>
     </Exec>
   </Actions>
-</Task>'''
-            
+</Task>"""
+
             # Сохраняем XML во временный файл
             import tempfile
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.xml', delete=False) as f:
+
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".xml", delete=False
+            ) as f:
                 f.write(task_xml)
                 xml_file = f.name
-            
+
             # Создаем задание через schtasks
             result = subprocess.run(
                 ["schtasks", "/create", "/tn", task_name, "/xml", xml_file, "/f"],
                 capture_output=True,
-                text=True
+                text=True,
             )
-            
+
             # Удаляем временный файл
             os.unlink(xml_file)
-            
+
             if result.returncode == 0:
                 logger.info(f"Created Windows Task Scheduler task: {task_name}")
                 return {
                     "success": True,
                     "method": "task_scheduler",
-                    "task_name": task_name
+                    "task_name": task_name,
                 }
             else:
                 return {
                     "success": False,
                     "error": result.stderr,
-                    "method": "task_scheduler"
+                    "method": "task_scheduler",
                 }
-                
+
         except Exception as e:
-            return {
-                "success": False,
-                "error": str(e),
-                "method": "task_scheduler"
-            }
-    
+            return {"success": False, "error": str(e), "method": "task_scheduler"}
+
     def _install_windows_service(self) -> Dict[str, Any]:
         """Устанавливает как службу Windows (требует прав администратора)"""
         try:
@@ -221,16 +201,12 @@ class SystemIntegration:
             return {
                 "success": False,
                 "error": "Windows service installation not yet implemented",
-                "method": "service"
+                "method": "service",
             }
-            
+
         except Exception as e:
-            return {
-                "success": False,
-                "error": str(e),
-                "method": "service"
-            }
-    
+            return {"success": False, "error": str(e), "method": "service"}
+
     def _install_linux_autostart(self) -> Dict[str, Any]:
         """Устанавливает автозапуск в Linux"""
         try:
@@ -240,14 +216,10 @@ class SystemIntegration:
             # Для crontab
             else:
                 return self._install_linux_crontab()
-                
+
         except Exception as e:
-            return {
-                "success": False,
-                "error": str(e),
-                "method": "linux"
-            }
-    
+            return {"success": False, "error": str(e), "method": "linux"}
+
     def _install_linux_systemd(self) -> Dict[str, Any]:
         """Создает службу systemd"""
         service_name = "student-autocommiter"
@@ -266,83 +238,58 @@ RestartSec=10
 [Install]
 WantedBy=multi-user.target
 """
-        
+
         service_file = f"/etc/systemd/system/{service_name}.service"
-        
+
         try:
             # Требует прав sudo
-            with open(service_file, 'w') as f:
+            with open(service_file, "w") as f:
                 f.write(service_content)
-            
+
             # Включаем автозапуск
             subprocess.run(["systemctl", "enable", service_name], check=True)
-            
+
             logger.info(f"Created systemd service: {service_name}")
-            
-            return {
-                "success": True,
-                "method": "systemd",
-                "service_name": service_name
-            }
-            
+
+            return {"success": True, "method": "systemd", "service_name": service_name}
+
         except PermissionError:
             return {
                 "success": False,
                 "error": "Permission denied. Try with sudo.",
-                "method": "systemd"
+                "method": "systemd",
             }
         except Exception as e:
-            return {
-                "success": False,
-                "error": str(e),
-                "method": "systemd"
-            }
-    
+            return {"success": False, "error": str(e), "method": "systemd"}
+
     def _install_linux_crontab(self) -> Dict[str, Any]:
         """Добавляет в crontab"""
         try:
             # Команда для запуска при перезагрузке
             command = f"@reboot {sys.executable} {os.path.join(os.path.dirname(__file__), 'main.py')} start"
-            
+
             # Получаем текущий crontab
-            result = subprocess.run(
-                ["crontab", "-l"],
-                capture_output=True,
-                text=True
-            )
-            
+            result = subprocess.run(["crontab", "-l"], capture_output=True, text=True)
+
             current_crontab = result.stdout if result.returncode == 0 else ""
-            
+
             # Добавляем нашу команду
             new_crontab = current_crontab.strip() + f"\n{command}\n"
-            
+
             # Устанавливаем новый crontab
-            subprocess.run(
-                ["crontab", "-"],
-                input=new_crontab,
-                text=True,
-                check=True
-            )
-            
+            subprocess.run(["crontab", "-"], input=new_crontab, text=True, check=True)
+
             logger.info("Added to crontab for autostart")
-            
-            return {
-                "success": True,
-                "method": "crontab",
-                "command": command
-            }
-            
+
+            return {"success": True, "method": "crontab", "command": command}
+
         except Exception as e:
-            return {
-                "success": False,
-                "error": str(e),
-                "method": "crontab"
-            }
-    
+            return {"success": False, "error": str(e), "method": "crontab"}
+
     def remove_autostart(self) -> Dict[str, Any]:
         """
         Удаляет автозапуск
-        
+
         Returns:
             Результат операции
         """
@@ -350,84 +297,71 @@ WantedBy=multi-user.target
             return self._remove_windows_autostart()
         else:
             return self._remove_linux_autostart()
-    
+
     def _remove_windows_autostart(self) -> Dict[str, Any]:
         """Удаляет автозапуск в Windows"""
         try:
             import winreg
-            
+
             method = self.config.get("auto_start.startup_method", "registry")
-            
+
             if method == "registry":
                 key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
                 key_name = "StudentAutocommiter"
-                
+
                 try:
                     key = winreg.OpenKey(
-                        winreg.HKEY_CURRENT_USER,
-                        key_path,
-                        0,
-                        winreg.KEY_SET_VALUE
+                        winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE
                     )
-                    
+
                     winreg.DeleteValue(key, key_name)
                     winreg.CloseKey(key)
-                    
+
                     logger.info(f"Removed from Windows startup registry: {key_name}")
-                    
-                    return {
-                        "success": True,
-                        "method": "registry"
-                    }
-                    
+
+                    return {"success": True, "method": "registry"}
+
                 except FileNotFoundError:
                     # Ключ уже не существует
                     return {
                         "success": True,
                         "method": "registry",
-                        "note": "Already removed"
+                        "note": "Already removed",
                     }
-                    
+
             elif method == "task_scheduler":
                 task_name = "StudentAutocommiter"
-                
+
                 result = subprocess.run(
                     ["schtasks", "/delete", "/tn", task_name, "/f"],
                     capture_output=True,
-                    text=True
+                    text=True,
                 )
-                
+
                 if result.returncode == 0:
                     logger.info(f"Removed Windows Task Scheduler task: {task_name}")
-                    return {
-                        "success": True,
-                        "method": "task_scheduler"
-                    }
+                    return {"success": True, "method": "task_scheduler"}
                 else:
                     return {
                         "success": False,
                         "error": result.stderr,
-                        "method": "task_scheduler"
+                        "method": "task_scheduler",
                     }
-            
+
             else:
                 return {
                     "success": False,
                     "error": f"Unknown startup method: {method}",
-                    "method": method
+                    "method": method,
                 }
-                
+
         except Exception as e:
-            return {
-                "success": False,
-                "error": str(e),
-                "method": "unknown"
-            }
-    
+            return {"success": False, "error": str(e), "method": "unknown"}
+
     def check_autostart_status(self) -> Dict[str, Any]:
         """
         Проверяет статус автозапуска
-        
+
         Returns:
             Информация о статусе
         """
@@ -435,103 +369,93 @@ WantedBy=multi-user.target
             return self._check_windows_autostart()
         else:
             return self._check_linux_autostart()
-    
+
     def _check_windows_autostart(self) -> Dict[str, Any]:
         """Проверяет автозапуск в Windows"""
         try:
             import winreg
-            
+
             # Проверяем реестр
             key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
             key_name = "StudentAutocommiter"
-            
+
             try:
                 key = winreg.OpenKey(
-                    winreg.HKEY_CURRENT_USER,
-                    key_path,
-                    0,
-                    winreg.KEY_READ
+                    winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_READ
                 )
-                
+
                 value, reg_type = winreg.QueryValueEx(key, key_name)
                 winreg.CloseKey(key)
-                
-                return {
-                    "installed": True,
-                    "method": "registry",
-                    "command": value
-                }
-                
+
+                return {"installed": True, "method": "registry", "command": value}
+
             except FileNotFoundError:
                 # Не установлено в реестре
                 pass
-            
+
             # Проверяем Планировщик задач
             result = subprocess.run(
                 ["schtasks", "/query", "/tn", "StudentAutocommiter", "/fo", "LIST"],
                 capture_output=True,
-                text=True
+                text=True,
             )
-            
+
             if result.returncode == 0:
                 return {
                     "installed": True,
                     "method": "task_scheduler",
-                    "status": "active"
+                    "status": "active",
                 }
-            
+
             return {
                 "installed": False,
-                "methods_checked": ["registry", "task_scheduler"]
+                "methods_checked": ["registry", "task_scheduler"],
             }
-            
+
         except Exception as e:
-            return {
-                "installed": False,
-                "error": str(e)
-            }
-    
+            return {"installed": False, "error": str(e)}
+
     def create_startup_script(self) -> bool:
         """
         Создает скрипт для запуска при старте системы
-        
+
         Returns:
             True если успешно
         """
         try:
             # Создаем батник для Windows
             if self.is_windows:
-                script_content = f'''@echo off
+                script_content = f"""@echo off
 echo Starting Student Autocommiter...
 "{sys.executable}" "{os.path.join(os.path.dirname(__file__), "main.py")}" start
 pause
-'''
+"""
                 script_path = os.path.join(os.getcwd(), "start_autocommiter.bat")
-                
-                with open(script_path, 'w', encoding='utf-8') as f:
+
+                with open(script_path, "w", encoding="utf-8") as f:
                     f.write(script_content)
-                
+
                 logger.info(f"Created startup script: {script_path}")
                 return True
-            
+
             # Для Linux
             else:
-                script_content = f'''#!/bin/bash
+                script_content = f"""#!/bin/bash
 echo "Starting Student Autocommiter..."
 cd "{os.getcwd()}"
 "{sys.executable}" "{os.path.join(os.path.dirname(__file__), "main.py")}" start
-'''
+"""
                 script_path = os.path.join(os.getcwd(), "start_autocommiter.sh")
-                
-                with open(script_path, 'w', encoding='utf-8') as f:
+
+                with open(script_path, "w", encoding="utf-8") as f:
                     f.write(script_content)
-                
+
                 # Делаем исполняемым
                 os.chmod(script_path, 0o755)
-                
+
                 logger.info(f"Created startup script: {script_path}")
                 return True
-                
+
         except Exception as e:
             logger.error(f"Failed to create startup script: {e}")
             return False
