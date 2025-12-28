@@ -1,0 +1,25 @@
+STUDENT AUTOCOMMITER - ETHICAL GUIDELINES
+
+IMPORTANT: This tool is created for EDUCATIONAL PURPOSES only.
+It demonstrates automation concepts, Git operations, and system integration.
+
+DO NOT USE THIS TOOL FOR:
+- Deceiving teachers or professors about your actual work
+- Falsifying contribution history in team projects
+- Misrepresenting your activity to employers
+- Any form of academic dishonesty
+
+INTENDED LEGITIMATE USES:
+- Learning Git automation techniques
+- Testing continuous integration systems
+- Creating sample repositories for demonstrations
+- Personal projects where you understand the implications
+
+By using this tool, you agree to:
+1. Use it only on repositories you own
+2. Not use it to gain unfair advantages
+3. Understand that detected misuse may have consequences
+4. Take full responsibility for your actions
+
+Remember: Real learning and genuine contributions 
+are more valuable than artificial activity graphs.

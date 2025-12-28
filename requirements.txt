@@ -1,0 +1,13 @@
+gitpython>=3.1.30
+schedule>=1.1.0
+python-dateutil>=2.8.2
+psutil>=5.9.0
+# Для Windows специфичных функций
+pywin32>=303; sys_platform == 'win32'
+# Для тестирования
+pytest>=7.3.1
+pytest-cov>=4.0.0
+flake8>=6.0.0
+PyYAML>=6.0
+
+
