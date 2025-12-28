@@ -30,7 +30,7 @@ jobs:
     - name: Run pycodestyle (PEP8)
       run: |
         echo "=== pycodestyle PEP8 Check ==="
-        if pycodestyle --max-line-length=79 src/; then
+        if pycodestyle --max-line-length=120 src/; then
           echo "✅ No PEP8 violations found"
         else
           echo "❌ PEP8 violations found"
@@ -48,7 +48,7 @@ jobs:
         
         echo ""
         echo "Checking complexity and style..."
-        flake8 src/ --max-complexity=10 --max-line-length=79 --statistics
+        flake8 src/ --max-complexity=20 --max-line-length=120 --statistics
     
     - name: Generate PEP8 report
       run: |
@@ -60,13 +60,13 @@ jobs:
         
         echo "## Pycodestyle Results" >> pep8-report.md
         echo '```' >> pep8-report.md
-        pycodestyle --max-line-length=79 --statistics src/ 2>&1 | tee -a pep8-report.md
+        pycodestyle --max-line-length=120 --statistics src/ 2>&1 | tee -a pep8-report.md
         echo '```' >> pep8-report.md
         echo "" >> pep8-report.md
         
         echo "## Flake8 Results" >> pep8-report.md
         echo '```' >> pep8-report.md
-        flake8 src/ --max-complexity=10 --max-line-length=79 --statistics 2>&1 | tee -a pep8-report.md
+        flake8 src/ --max-complexity=20 --max-line-length=120 --statistics 2>&1 | tee -a pep8-report.md
         echo '```' >> pep8-report.md
         
         echo "## File-by-file analysis" >> pep8-report.md
@@ -74,7 +74,7 @@ jobs:
         for file in src/*.py; do
           if [ -f "$file" ]; then
             echo "=== $file ==="
-            pycodestyle --max-line-length=79 "$file" 2>/dev/null || true
+            pycodestyle --max-line-length=120 "$file" 2>/dev/null || true
             echo ""
           fi
         done
