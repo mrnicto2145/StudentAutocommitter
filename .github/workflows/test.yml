@@ -2,7 +2,7 @@ name: PEP8 Code Style Check
 
 on:
   push:
-    branches: [ main, develop, feature/* ]
+    branches: [ main, develop ]
   pull_request:
     branches: [ main ]
 
@@ -12,79 +12,77 @@ jobs:
     
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.9'
+        python-version: '3.10'
     
-    - name: Install pycodestyle and flake8
+    - name: Install PEP8 tools
       run: |
         python -m pip install --upgrade pip
-        pip install pycodestyle flake8
+        pip install pycodestyle==2.11.1 flake8==7.0.0
     
-    - name: Check Python version
+    - name: Python version
       run: python --version
     
-    - name: PEP8 Check with pycodestyle
+    - name: Run pycodestyle (PEP8)
       run: |
-        echo "=== Running pycodestyle (PEP8) check ==="
-        pycodestyle --max-line-length=79 --statistics src/ || true
+        echo "=== pycodestyle PEP8 Check ==="
+        if pycodestyle --max-line-length=79 src/; then
+          echo "✅ No PEP8 violations found"
+        else
+          echo "❌ PEP8 violations found"
+        fi
+    
+    - name: Run flake8 (syntax and style)
+      run: |
+        echo "=== flake8 Syntax and Style Check ==="
+        echo "Checking for critical errors..."
+        if flake8 src/ --select=E9,F63,F7,F82 --show-source; then
+          echo "✅ No critical errors found"
+        else
+          echo "❌ Critical errors found"
+        fi
+        
         echo ""
-        echo "=== Detailed PEP8 violations ==="
-        pycodestyle --max-line-length=79 src/ || echo "No PEP8 violations found"
+        echo "Checking complexity and style..."
+        flake8 src/ --max-complexity=10 --max-line-length=79 --statistics
     
-    - name: Flake8 Check
-      run: |
-        echo "=== Running flake8 check ==="
-        flake8 src/ --count --select=E9,F63,F7,F82 --show-source --statistics || true
-        echo ""
-        echo "=== Flake8 complexity and style ==="
-        flake8 src/ --count --exit-zero --max-complexity=10 --max-line-length=79 --statistics
-    
-    - name: Check for syntax errors
-      run: |
-        echo "=== Checking for Python syntax errors ==="
-        python -m py_compile src/*.py || true
-        for file in src/*.py; do
-          if python -m py_compile "$file" 2>/dev/null; then
-            echo "✓ $file - Syntax OK"
-          else
-            echo "✗ $file - Syntax error"
-            python -m py_compile "$file"
-          fi
-        done
-    
-    - name: Create PEP8 Report
-      if: always()
+    - name: Generate PEP8 report
       run: |
         echo "# PEP8 Code Style Report" > pep8-report.md
-        echo "Generated: $(date)" >> pep8-report.md
-        echo "" >> pep8-report.md
-        echo "## Summary" >> pep8-report.md
+        echo "Generated: $(date -u)" >> pep8-report.md
+        echo "Branch: ${{ github.ref }}" >> pep8-report.md
+        echo "Commit: ${{ github.sha }}" >> pep8-report.md
         echo "" >> pep8-report.md
         
-        # Run pycodestyle and capture output
-        pycodestyle --max-line-length=79 --statistics src/ > pep8_stats.txt 2>&1 || true
-        echo "### Pycodestyle Statistics" >> pep8-report.md
+        echo "## Pycodestyle Results" >> pep8-report.md
         echo '```' >> pep8-report.md
-        cat pep8_stats.txt >> pep8-report.md
+        pycodestyle --max-line-length=79 --statistics src/ 2>&1 | tee -a pep8-report.md
         echo '```' >> pep8-report.md
         echo "" >> pep8-report.md
         
-        # Run flake8 and capture output
-        echo "### Flake8 Check" >> pep8-report.md
+        echo "## Flake8 Results" >> pep8-report.md
         echo '```' >> pep8-report.md
-        flake8 src/ --count --exit-zero --max-complexity=10 --max-line-length=79 >> pep8-report.md 2>&1
+        flake8 src/ --max-complexity=10 --max-line-length=79 --statistics 2>&1 | tee -a pep8-report.md
+        echo '```' >> pep8-report.md
+        
+        echo "## File-by-file analysis" >> pep8-report.md
+        echo '```' >> pep8-report.md
+        for file in src/*.py; do
+          if [ -f "$file" ]; then
+            echo "=== $file ==="
+            pycodestyle --max-line-length=79 "$file" 2>/dev/null || true
+            echo ""
+          fi
+        done
         echo '```' >> pep8-report.md
     
     - name: Upload PEP8 Report
-      if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: pep8-report
-        path: |
-          pep8-report.md
-          pep8_stats.txt
-        retention-days: 7
+        name: pep8-code-report
+        path: pep8-report.md
+        retention-days: 30
